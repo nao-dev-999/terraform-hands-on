@@ -82,29 +82,6 @@ resource "aws_security_group" "rds" {
   }
 }
 
-resource "aws_serverlessapplicationrepository_cloudformation_stack" "rds_rotation" {
-  name             = "${var.project}-${var.env}-rds-rotation"
-  application_id   = "arn:aws:serverlessrepo:us-east-1:297356227824:applications/SecretsManagerRDSPostgreSQLRotationSingleUser"
-  semantic_version = "1.1.60"
-  capabilities     = ["CAPABILITY_IAM", "CAPABILITY_RESOURCE_POLICY"]
-
-  parameters = {
-    endpoint            = "https://secretsmanager.${var.aws_region}.amazonaws.com"
-    functionName        = "${var.project}-${var.env}-rds-rotation"
-    vpcSecurityGroupIds = aws_security_group.rds.id
-    vpcSubnetIds        = join(",", var.subnet_ids)
-  }
-}
-
-resource "aws_secretsmanager_secret_rotation" "rds_master" {
-  secret_id           = aws_db_instance.this.master_user_secret[0].secret_arn
-  rotation_lambda_arn = aws_serverlessapplicationrepository_cloudformation_stack.rds_rotation.outputs["RotationLambdaARN"]
-
-  rotation_rules {
-    automatically_after_days = 90
-  }
-}
-
 resource "aws_db_parameter_group" "this" {
   name   = "${var.project}-${var.env}-pg-params"
   family = "postgres16" # engineのメジャーバージョンに合わせて指定する
@@ -181,7 +158,7 @@ resource "aws_db_event_subscription" "this" {
   name        = "${var.project}-${var.env}-rds-events"
   sns_topic   = var.alarm_sns_topic_arn
   source_type = "db-instance"
-  source_ids  = [aws_db_instance.this.id]
+  source_ids  = [aws_db_instance.this.identifier]
 
   event_categories = [
     "failover",

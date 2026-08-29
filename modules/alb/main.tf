@@ -71,6 +71,37 @@ resource "aws_s3_bucket_lifecycle_configuration" "access_logs" {
 data "aws_caller_identity" "current" {}
 data "aws_region" "current" {}
 
+locals {
+  # ap-northeast-1等、2022年8月より前に存在するリージョンでは、ALBアクセスログの書き込みは
+  # 汎用のログ配信サービスプリンシパルではなく、リージョンごとに固定されたELBのAWSアカウントに
+  # 許可する必要がある(AWS公式ドキュメント "Enable access logging" 参照)。
+  elb_log_account_ids = {
+    "us-east-1"      = "127311923021"
+    "us-east-2"      = "033677994240"
+    "us-west-1"      = "027434742980"
+    "us-west-2"      = "797873946194"
+    "af-south-1"     = "098369216593"
+    "ap-east-1"      = "754344448648"
+    "ap-northeast-1" = "582318560864"
+    "ap-northeast-2" = "600734575887"
+    "ap-northeast-3" = "383597477331"
+    "ap-south-1"     = "718504428378"
+    "ap-southeast-1" = "114774131450"
+    "ap-southeast-2" = "783225319266"
+    "ca-central-1"   = "985666609251"
+    "eu-central-1"   = "054676820928"
+    "eu-north-1"     = "897822967062"
+    "eu-south-1"     = "635631232127"
+    "eu-west-1"      = "156460612806"
+    "eu-west-2"      = "652711504416"
+    "eu-west-3"      = "009996457667"
+    "me-south-1"     = "076674570225"
+    "sa-east-1"      = "507241528517"
+  }
+
+  elb_log_account_id = local.elb_log_account_ids[data.aws_region.current.name]
+}
+
 resource "aws_s3_bucket_policy" "access_logs" {
   bucket = aws_s3_bucket.access_logs.id
 
@@ -80,35 +111,21 @@ resource "aws_s3_bucket_policy" "access_logs" {
       {
         Sid       = "AWSLogDeliveryWrite"
         Effect    = "Allow"
-        Principal = { Service = "delivery.logs.amazonaws.com" }
+        Principal = { AWS = "arn:aws:iam::${local.elb_log_account_id}:root" }
         Action    = "s3:PutObject"
         Resource  = "${aws_s3_bucket.access_logs.arn}/${var.project}-${var.env}-alb/AWSLogs/${data.aws_caller_identity.current.account_id}/*"
         Condition = {
           StringEquals = {
-            "s3:x-amz-acl"      = "bucket-owner-full-control"
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-          # 特定ALBのARNに絞ると循環参照になるため、サービス種別+アカウント+リージョンの
-          # ワイルドカードで絞り込む
-          ArnLike = {
-            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
+            "s3:x-amz-acl" = "bucket-owner-full-control"
           }
         }
       },
       {
         Sid       = "AWSLogDeliveryAclCheck"
         Effect    = "Allow"
-        Principal = { Service = "delivery.logs.amazonaws.com" }
+        Principal = { AWS = "arn:aws:iam::${local.elb_log_account_id}:root" }
         Action    = "s3:GetBucketAcl"
         Resource  = aws_s3_bucket.access_logs.arn
-        Condition = {
-          StringEquals = {
-            "aws:SourceAccount" = data.aws_caller_identity.current.account_id
-          }
-          ArnLike = {
-            "aws:SourceArn" = "arn:aws:elasticloadbalancing:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:loadbalancer/*"
-          }
-        }
       },
       {
         Sid       = "DenyInsecureTransport"

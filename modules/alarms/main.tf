@@ -408,8 +408,9 @@ locals {
     {
       type = "metric", x = 0, y = 0, width = 12, height = 6
       properties = {
-        title = "ECS CPU / メモリ使用率"
-        view  = "timeSeries"
+        title  = "ECS CPU / メモリ使用率"
+        view   = "timeSeries"
+        region = var.aws_region
         metrics = [
           ["AWS/ECS", "CPUUtilization", "ClusterName", var.ecs_cluster_name,
           "ServiceName", var.ecs_service_name, { label = "CPU" }],
@@ -421,8 +422,9 @@ locals {
     {
       type = "metric", x = 12, y = 0, width = 12, height = 6
       properties = {
-        title = "ECS 起動中タスク数"
-        view  = "timeSeries"
+        title  = "ECS 起動中タスク数"
+        view   = "timeSeries"
+        region = var.aws_region
         metrics = [
           ["ECS/ContainerInsights", "RunningTaskCount", "ClusterName", var.ecs_cluster_name,
           "ServiceName", var.ecs_service_name, { label = "RunningTaskCount" }],
@@ -432,8 +434,9 @@ locals {
     {
       type = "metric", x = 0, y = 6, width = 12, height = 6
       properties = {
-        title = "ALB ヘルスチェック / 5xx"
-        view  = "timeSeries"
+        title  = "ALB ヘルスチェック / 5xx"
+        view   = "timeSeries"
+        region = var.aws_region
         metrics = [
           ["AWS/ApplicationELB", "UnHealthyHostCount", "LoadBalancer", var.alb_arn_suffix,
           "TargetGroup", var.alb_target_group_arn_suffix, { label = "UnHealthyHostCount" }],
@@ -447,8 +450,9 @@ locals {
     {
       type = "metric", x = 12, y = 6, width = 12, height = 6
       properties = {
-        title = "RDS CPU / コネクション数"
-        view  = "timeSeries"
+        title  = "RDS CPU / コネクション数"
+        view   = "timeSeries"
+        region = var.aws_region
         metrics = [
           ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", var.rds_instance_id,
           { label = "CPU" }],
@@ -460,8 +464,9 @@ locals {
     {
       type = "metric", x = 0, y = 12, width = 12, height = 6
       properties = {
-        title = "ElastiCache Redis"
-        view  = "timeSeries"
+        title  = "ElastiCache Redis"
+        view   = "timeSeries"
+        region = var.aws_region
         metrics = [
           ["AWS/ElastiCache", "EngineCPUUtilization", "CacheClusterId", var.redis_cluster_id,
           { label = "CPU" }],
@@ -475,8 +480,9 @@ locals {
     {
       type = "metric", x = 12, y = 12, width = 12, height = 6
       properties = {
-        title = "アプリログ ERROR件数"
-        view  = "timeSeries"
+        title  = "アプリログ ERROR件数"
+        view   = "timeSeries"
+        region = var.aws_region
         metrics = [
           ["${var.project}-${var.env}/App", "AppErrorLogCount", { label = "AppErrorLogCount" }],
         ]
