@@ -95,3 +95,27 @@ resource "aws_vpc_security_group_egress_rule" "alb_egress_to_ecs" {
   ip_protocol                  = "tcp"
   referenced_security_group_id = module.ecs.ecs_sg_id
 }
+
+# Alarms Module
+module "alarms" {
+  source = "../../modules/alarms"
+
+  project    = var.project
+  env        = var.env
+  aws_region = var.aws_region
+
+  notification_emails = var.notification_emails
+
+  app_log_group_name = module.ecs.app_log_group_name
+  ecs_cluster_name   = module.ecs.cluster_name
+  ecs_service_name   = module.ecs.service_name
+
+  alb_arn_suffix              = module.alb.alb_arn_suffix
+  alb_target_group_arn_suffix = module.alb.target_group_arn_suffix
+
+  rds_instance_id  = module.rds.rds_instance_id
+  redis_cluster_id = module.ecs.redis_cluster_id
+
+  waf_web_acl_metric_name         = module.waf.web_acl_metric_name
+  waf_auth_rate_limit_metric_name = module.waf.auth_rate_limit_metric_name
+}
