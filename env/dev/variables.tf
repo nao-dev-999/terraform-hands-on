@@ -45,3 +45,57 @@ variable "batch_schedule_expression" {
   type    = string
   default = "cron(0 17 * * ? *)"
 }
+
+# RDS
+variable "rds_identifier" {
+  type = string
+}
+
+variable "rds_database_name" {
+  type = string
+}
+
+variable "rds_instance_class" {
+  type    = string
+  default = "db.t4g.micro"
+}
+
+variable "rds_engine_version" {
+  type    = string
+  default = "16"
+}
+
+variable "rds_multi_az" {
+  type    = bool
+  default = false
+}
+
+variable "rds_backup_retention_period" {
+  type    = number
+  default = 7
+}
+
+variable "rds_skip_final_snapshot" {
+  type    = bool
+  default = true
+}
+
+variable "rds_deletion_protection" {
+  type    = bool
+  default = false
+}
+
+variable "rds_max_connections_threshold" {
+  type    = number
+  default = 80
+}
+
+variable "monthly_limit_usd" {
+  type    = number
+  default = 50
+}
+
+variable "notification_emails" {
+  type    = list(string)
+  default = []
+}
