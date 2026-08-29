@@ -62,3 +62,21 @@ variable "rds_database_connections_threshold" {
 variable "redis_cluster_id" {
   type = string
 }
+
+variable "waf_web_acl_metric_name" {
+  type = string
+}
+
+variable "waf_auth_rate_limit_metric_name" {
+  type = string
+}
+
+variable "waf_blocked_requests_threshold" {
+  type    = number
+  default = 100
+}
+
+variable "waf_auth_rate_limit_threshold" {
+  type    = number
+  default = 1
+}
