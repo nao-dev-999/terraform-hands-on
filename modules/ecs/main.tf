@@ -348,9 +348,7 @@ locals {
       BackoffRate     = 2.0
     }
   ]
-}
 
-locals {
   batch_network_configuration = {
     AwsvpcConfiguration = {
       Subnets        = var.private_subnet_ids
