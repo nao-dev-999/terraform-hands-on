@@ -128,3 +128,38 @@ module "waf" {
   env     = var.env
   alb_arn = module.alb.alb_arn
 }
+
+# ECR Module
+module "ecr" {
+  source = "../../modules/ecr"
+
+  project = var.project
+  env     = var.env
+}
+
+# CodePipeline Module
+module "codepipeline" {
+  source = "../../modules/codepipeline"
+
+  project    = var.project
+  env        = var.env
+  aws_region = var.aws_region
+
+  github_repository = var.github_repository
+  github_branch     = var.github_branch
+
+  app_repository_url    = module.ecr.app_repository_url
+  flyway_repository_url = module.ecr.flyway_repository_url
+  ecs_cluster_name      = module.ecs.cluster_name
+  ecs_service_name      = module.ecs.service_name
+
+  task_execution_role_arn = module.ecs.task_execution_role_arn
+  task_role_arn           = module.ecs.task_role_arn
+
+  flyway_task_definition_family = module.ecs.flyway_task_definition_family
+  flyway_subnet_id              = module.vpc.private_subnet_ids[0]
+  flyway_sg_id                  = module.ecs.ecs_sg_id
+
+  batch_repository_url         = module.ecr.batch_repository_url
+  batch_task_definition_family = module.ecs.batch_task_definition_family
+}

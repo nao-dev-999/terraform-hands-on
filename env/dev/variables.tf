@@ -99,3 +99,13 @@ variable "notification_emails" {
   type    = list(string)
   default = []
 }
+
+# CI/CD
+variable "github_repository" {
+  type = string
+}
+
+variable "github_branch" {
+  type    = string
+  default = "main"
+}
