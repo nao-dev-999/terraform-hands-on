@@ -116,6 +116,6 @@ module "alarms" {
   rds_instance_id  = module.rds.rds_instance_id
   redis_cluster_id = module.ecs.redis_cluster_id
 
-  waf_web_acl_metric_name         = module.waf.web_acl_metric_name
-  waf_auth_rate_limit_metric_name = module.waf.auth_rate_limit_metric_name
+  # waf_web_acl_metric_name         = module.waf.web_acl_metric_name
+  # waf_auth_rate_limit_metric_name = module.waf.auth_rate_limit_metric_name
 }

@@ -403,64 +403,6 @@ resource "aws_cloudwatch_metric_alarm" "redis_freeable_memory_low" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "waf_blocked_requests_high" {
-  alarm_name        = "${var.project}-${var.env}-waf-blocked-requests-high"
-  alarm_description = "WAF全体でBlockedRequestsが閾値を超えた"
-  # 通常想定しない規模のブロック（DDoS/スキャン等の攻撃、または誤ブロックによる正規トラフィック遮断）の早期検知
-
-  namespace   = "AWS/WAFV2"
-  metric_name = "BlockedRequests"
-  dimensions = {
-    WebACL = var.waf_web_acl_metric_name
-    Rule   = "ALL"
-    Region = var.aws_region
-  }
-
-  statistic           = "Sum"
-  period              = 300
-  evaluation_periods  = 1
-  threshold           = var.waf_blocked_requests_threshold
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  treat_missing_data  = "notBreaching"
-
-  alarm_actions = [aws_sns_topic.alarms.arn]
-  ok_actions    = [aws_sns_topic.alarms.arn]
-
-  tags = {
-    Project = var.project
-    Env     = var.env
-  }
-}
-
-resource "aws_cloudwatch_metric_alarm" "waf_auth_rate_limit_triggered" {
-  alarm_name        = "${var.project}-${var.env}-waf-auth-rate-limit-triggered"
-  alarm_description = "WAFのauth-rate-limitルールがリクエストをブロックした（ブルートフォース/スパムアカウント作成の疑い）"
-  # ブルートフォース/スパムアカウント作成の試行があったことを示すため、1件でも即座に検知する
-
-  namespace   = "AWS/WAFV2"
-  metric_name = "BlockedRequests"
-  dimensions = {
-    WebACL = var.waf_web_acl_metric_name
-    Rule   = var.waf_auth_rate_limit_metric_name
-    Region = var.aws_region
-  }
-
-  statistic           = "Sum"
-  period              = 300
-  evaluation_periods  = 1
-  threshold           = var.waf_auth_rate_limit_threshold
-  comparison_operator = "GreaterThanOrEqualToThreshold"
-  treat_missing_data  = "notBreaching"
-
-  alarm_actions = [aws_sns_topic.alarms.arn]
-  ok_actions    = [aws_sns_topic.alarms.arn]
-
-  tags = {
-    Project = var.project
-    Env     = var.env
-  }
-}
-
 locals {
   dashboard_widgets = [
     {
@@ -537,19 +479,6 @@ locals {
         view  = "timeSeries"
         metrics = [
           ["${var.project}-${var.env}/App", "AppErrorLogCount", { label = "AppErrorLogCount" }],
-        ]
-      }
-    },
-    {
-      type = "metric", x = 0, y = 18, width = 12, height = 6
-      properties = {
-        title = "WAF Blocked / Allowed"
-        view  = "timeSeries"
-        metrics = [
-          ["AWS/WAFV2", "BlockedRequests", "WebACL", var.waf_web_acl_metric_name,
-          "Rule", "ALL", "Region", var.aws_region, { label = "Blocked" }],
-          ["AWS/WAFV2", "AllowedRequests", "WebACL", var.waf_web_acl_metric_name,
-          "Rule", "ALL", "Region", var.aws_region, { label = "Allowed" }],
         ]
       }
     },

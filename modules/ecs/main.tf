@@ -264,6 +264,7 @@ resource "aws_appautoscaling_target" "ecs" {
 }
 
 resource "aws_appautoscaling_policy" "cpu" {
+  name               = "${var.project}-${var.env}-ecs-cpu-scaling"
   policy_type        = "TargetTrackingScaling"
   resource_id        = aws_appautoscaling_target.ecs.resource_id
   scalable_dimension = aws_appautoscaling_target.ecs.scalable_dimension
@@ -349,6 +350,23 @@ locals {
   ]
 }
 
+locals {
+  batch_network_configuration = {
+    AwsvpcConfiguration = {
+      Subnets        = var.private_subnet_ids
+      SecurityGroups = [aws_security_group.ecs.id]
+      AssignPublicIp = "DISABLED"
+    }
+  }
+
+  batch_run_task_parameters = {
+    LaunchType           = "FARGATE"
+    Cluster              = aws_ecs_cluster.this.arn
+    TaskDefinition       = aws_ecs_task_definition.batch.arn
+    NetworkConfiguration = local.batch_network_configuration
+  }
+}
+
 resource "aws_sfn_state_machine" "batch_orchestrator" {
   name     = "${var.project}-${var.env}-batch-orchestrator"
   role_arn = aws_iam_role.sfn_batch_orchestrator.arn
@@ -361,20 +379,50 @@ resource "aws_sfn_state_machine" "batch_orchestrator" {
       PaymentIntakeJob = {
         Type     = "Task"
         Resource = "arn:aws:states:::ecs:runTask.sync"
-        Retry    = local.batch_run_task_retry
-        Next     = "SalesAggregationJob"
+        Parameters = merge(local.batch_run_task_parameters, {
+          Overrides = {
+            ContainerOverrides = [
+              {
+                Name    = "batch"
+                Command = ["payment-intake"]
+              }
+            ]
+          }
+        })
+        Retry = local.batch_run_task_retry
+        Next  = "SalesAggregationJob"
       }
       SalesAggregationJob = {
         Type     = "Task"
         Resource = "arn:aws:states:::ecs:runTask.sync"
-        Retry    = local.batch_run_task_retry
-        Next     = "SettlementExportJob"
+        Parameters = merge(local.batch_run_task_parameters, {
+          Overrides = {
+            ContainerOverrides = [
+              {
+                Name    = "batch"
+                Command = ["sales-aggregation"]
+              }
+            ]
+          }
+        })
+        Retry = local.batch_run_task_retry
+        Next  = "SettlementExportJob"
       }
       SettlementExportJob = {
         Type     = "Task"
         Resource = "arn:aws:states:::ecs:runTask.sync"
-        Retry    = local.batch_run_task_retry
-        End      = true
+        Parameters = merge(local.batch_run_task_parameters, {
+          Overrides = {
+            ContainerOverrides = [
+              {
+                Name    = "batch"
+                Command = ["settlement-export"]
+              }
+            ]
+          }
+        })
+        Retry = local.batch_run_task_retry
+        End   = true
       }
     }
   })
