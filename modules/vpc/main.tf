@@ -21,9 +21,9 @@ resource "aws_internet_gateway" "this" {
 resource "aws_subnet" "public" {
   count = length(var.public_subnet_cidrs)
 
-  vpc_id                  = aws_vpc.this.id
-  cidr_block              = var.public_subnet_cidrs[count.index]
-  availability_zone       = var.availability_zones[count.index]
+  vpc_id            = aws_vpc.this.id
+  cidr_block        = var.public_subnet_cidrs[count.index]
+  availability_zone = var.availability_zones[count.index]
 
   # 踏み台EC2等の起動時にパブリックIPを自動割り当てするための設定。
   # 本書では利便性を考慮してtrueにしていますが、ALBのみを配置する厳格な環境では
@@ -105,10 +105,10 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private" {
-  count          = length(aws_subnet.private)
-  subnet_id      = aws_subnet.private[count.index].id
+  count     = length(aws_subnet.private)
+  subnet_id = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private[
-  min(count.index, var.nat_gateway_count - 1)
+    min(count.index, var.nat_gateway_count - 1)
   ].id
 }
 
@@ -178,10 +178,10 @@ resource "aws_s3_bucket_policy" "vpc_flow_logs" {
 }
 
 resource "aws_flow_log" "this" {
-  vpc_id                = aws_vpc.this.id
-  traffic_type          = "ALL"
-  log_destination_type  = "s3"
-  log_destination       = "${aws_s3_bucket.vpc_flow_logs.arn}/vpc-flow-logs/"
+  vpc_id               = aws_vpc.this.id
+  traffic_type         = "ALL"
+  log_destination_type = "s3"
+  log_destination      = "${aws_s3_bucket.vpc_flow_logs.arn}/vpc-flow-logs/"
 
   destination_options {
     file_format                = "parquet"
