@@ -31,6 +31,9 @@ module "ecs" {
   flyway_image_tag = var.flyway_image_tag
 
   db_password_secret_arn = module.rds.rds_secret_arn
+  db_endpoint            = module.rds.rds_endpoint
+  db_port                = module.rds.rds_port
+  db_name                = var.rds_database_name
 
   desired_count = var.desired_count
   min_capacity  = var.min_capacity
