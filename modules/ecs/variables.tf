@@ -46,6 +46,18 @@ variable "db_password_secret_arn" {
   type = string
 }
 
+variable "db_endpoint" {
+  type = string
+}
+
+variable "db_port" {
+  type = number
+}
+
+variable "db_name" {
+  type = string
+}
+
 variable "task_cpu" {
   type    = string
   default = "512"

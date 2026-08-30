@@ -121,6 +121,29 @@ resource "aws_ecs_task_definition" "app" {
         }
       }
 
+      environment = [
+        {
+          name  = "SPRING_DATASOURCE_URL"
+          value = "jdbc:postgresql://${var.db_endpoint}:${var.db_port}/${var.db_name}"
+        },
+        {
+          name  = "SPRING_REDIS_HOST"
+          value = aws_elasticache_cluster.redis.cache_nodes[0].address
+        },
+        {
+          name  = "SPRING_REDIS_PORT"
+          value = tostring(aws_elasticache_cluster.redis.cache_nodes[0].port)
+        },
+        {
+          name  = "SPRING_DATA_REDIS_HOST"
+          value = aws_elasticache_cluster.redis.cache_nodes[0].address
+        },
+        {
+          name  = "SPRING_DATA_REDIS_PORT"
+          value = tostring(aws_elasticache_cluster.redis.cache_nodes[0].port)
+        }
+      ]
+
       secrets = [
         {
           name      = "SPRING_DATASOURCE_USERNAME"
@@ -143,10 +166,19 @@ resource "aws_ecs_task_definition" "app" {
   ])
 }
 
+resource "aws_cloudwatch_log_group" "flyway" {
+  name              = "/ecs/${var.project}-${var.env}-flyway"
+  retention_in_days = 14
+}
+
 resource "aws_ecs_task_definition" "flyway" {
-  family = "${var.project}-${var.env}-flyway"
-  cpu    = "512"
-  memory = "1024"
+  family                   = "${var.project}-${var.env}-flyway"
+  network_mode             = "awsvpc"
+  requires_compatibilities = ["FARGATE"]
+  cpu                      = "512"
+  memory                   = "1024"
+  execution_role_arn       = aws_iam_role.task_execution.arn
+  task_role_arn            = aws_iam_role.task.arn
 
   container_definitions = jsonencode([
     {
@@ -159,6 +191,33 @@ resource "aws_ecs_task_definition" "flyway" {
       ]
 
       command = ["migrate"]
+
+      environment = [
+        {
+          name  = "FLYWAY_URL"
+          value = "jdbc:postgresql://${var.db_endpoint}:${var.db_port}/${var.db_name}"
+        }
+      ]
+
+      secrets = [
+        {
+          name      = "FLYWAY_USER"
+          valueFrom = "${var.db_password_secret_arn}:username::"
+        },
+        {
+          name      = "FLYWAY_PASSWORD"
+          valueFrom = "${var.db_password_secret_arn}:password::"
+        }
+      ]
+
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          awslogs-group         = aws_cloudwatch_log_group.flyway.name
+          awslogs-region        = var.aws_region
+          awslogs-stream-prefix = "flyway"
+        }
+      }
     }
   ])
 
