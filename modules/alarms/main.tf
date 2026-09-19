@@ -41,7 +41,7 @@ resource "aws_cloudwatch_metric_alarm" "app_error" {
   evaluation_periods  = 1
   threshold           = 1
   comparison_operator = "GreaterThanOrEqualToThreshold"
-  # ログが出ていない期間は「エラー無し」として扱う（メトリクスフィルタが1件も一致しない期間はデータポイント自体が発生しないため）
+  # ログの送信自体が完全に止まった期間を「エラー無し」として扱う設定（ログが送られていてERRORが0件の期間はdefault_valueにより0が記録されるため、そもそも欠測にはならない）
   treat_missing_data = "notBreaching"
 
   alarm_actions = [aws_sns_topic.alarms.arn]
@@ -325,13 +325,15 @@ resource "aws_cloudwatch_metric_alarm" "rds_connections_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "redis_cpu_high" {
-  alarm_name        = "${var.project}-${var.env}-redis-cpu-high"
-  alarm_description = "ElastiCache RedisのEngineCPUUtilizationが90%以上"
+  for_each = toset(var.redis_cluster_ids)
+
+  alarm_name        = "${var.project}-${var.env}-redis-cpu-high-${each.value}"
+  alarm_description = "ElastiCache Redis（${each.value}）のEngineCPUUtilizationが90%以上"
 
   namespace   = "AWS/ElastiCache"
   metric_name = "EngineCPUUtilization"
   dimensions = {
-    CacheClusterId = var.redis_cluster_id
+    CacheClusterId = each.value
   }
 
   statistic           = "Average"
@@ -351,14 +353,16 @@ resource "aws_cloudwatch_metric_alarm" "redis_cpu_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "redis_evictions" {
-  alarm_name        = "${var.project}-${var.env}-redis-evictions"
-  alarm_description = "ElastiCache Redisでメモリ逼迫によるEvictionsが発生している"
+  for_each = toset(var.redis_cluster_ids)
+
+  alarm_name        = "${var.project}-${var.env}-redis-evictions-${each.value}"
+  alarm_description = "ElastiCache Redis（${each.value}）でメモリ逼迫によるEvictionsが発生している"
   # メモリ逼迫によるセッションデータ強制削除
 
   namespace   = "AWS/ElastiCache"
   metric_name = "Evictions"
   dimensions = {
-    CacheClusterId = var.redis_cluster_id
+    CacheClusterId = each.value
   }
 
   statistic           = "Sum"
@@ -378,13 +382,15 @@ resource "aws_cloudwatch_metric_alarm" "redis_evictions" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "redis_freeable_memory_low" {
-  alarm_name        = "${var.project}-${var.env}-redis-freeable-memory-low"
-  alarm_description = "ElastiCache Redisの空きメモリが逼迫している"
+  for_each = toset(var.redis_cluster_ids)
+
+  alarm_name        = "${var.project}-${var.env}-redis-freeable-memory-low-${each.value}"
+  alarm_description = "ElastiCache Redis（${each.value}）の空きメモリが逼迫している"
 
   namespace   = "AWS/ElastiCache"
   metric_name = "FreeableMemory"
   dimensions = {
-    CacheClusterId = var.redis_cluster_id
+    CacheClusterId = each.value
   }
 
   statistic           = "Average"
@@ -525,14 +531,11 @@ locals {
         title  = "ElastiCache Redis"
         view   = "timeSeries"
         region = var.aws_region
-        metrics = [
-          ["AWS/ElastiCache", "EngineCPUUtilization", "CacheClusterId", var.redis_cluster_id,
-          { label = "CPU" }],
-          ["AWS/ElastiCache", "Evictions", "CacheClusterId", var.redis_cluster_id,
-          { label = "Evictions" }],
-          ["AWS/ElastiCache", "FreeableMemory", "CacheClusterId", var.redis_cluster_id,
-          { label = "FreeableMemory" }],
-        ]
+        metrics = concat(
+          [for id in var.redis_cluster_ids : ["AWS/ElastiCache", "EngineCPUUtilization", "CacheClusterId", id, { label = "CPU (${id})" }]],
+          [for id in var.redis_cluster_ids : ["AWS/ElastiCache", "Evictions", "CacheClusterId", id, { label = "Evictions (${id})" }]],
+          [for id in var.redis_cluster_ids : ["AWS/ElastiCache", "FreeableMemory", "CacheClusterId", id, { label = "FreeableMemory (${id})" }]],
+        )
       }
     },
     {

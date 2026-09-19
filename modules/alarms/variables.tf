@@ -59,8 +59,8 @@ variable "rds_database_connections_threshold" {
   default = 80
 }
 
-variable "redis_cluster_id" {
-  type = string
+variable "redis_cluster_ids" {
+  type = list(string)
 }
 
 variable "waf_web_acl_metric_name" {

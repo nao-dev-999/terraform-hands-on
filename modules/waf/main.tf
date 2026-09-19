@@ -288,7 +288,7 @@ resource "aws_wafv2_web_acl_logging_configuration" "this" {
   log_destination_configs = [aws_s3_bucket.waf_logs.arn]
 
   # JWT認証のAuthorizationヘッダー、およびRedisセッションのCookieヘッダーは
-  # 機密情報を含むため、ログから除外する。
+  # 機微情報を含むため、ログから除外する。
   redacted_fields {
     single_header {
       name = "authorization"

@@ -6,8 +6,12 @@ output "app_log_group_name" {
   value = aws_cloudwatch_log_group.app.name
 }
 
-output "redis_cluster_id" {
-  value = aws_elasticache_cluster.redis.cluster_id
+output "redis_cluster_ids" {
+  # レプリケーショングループを構成する全ノードのIDを公開しています。
+  # AWS/ElastiCacheの標準メトリクス（EngineCPUUtilization等）はノード単位（CacheClusterId）でしか
+  # 発行されず、レプリケーショングループ全体やプライマリ/レプリカの役割を表すディメンションは存在しないため、
+  # 先頭ノードだけでなく全ノードをfor_eachで監視できるよう、リストとして公開しています。
+  value = aws_elasticache_replication_group.redis.member_clusters
 }
 
 output "cluster_name" {
@@ -35,5 +39,5 @@ output "batch_task_definition_family" {
 }
 
 output "redis_host" {
-  value = aws_elasticache_cluster.redis.cache_nodes[0].address
+  value = aws_elasticache_replication_group.redis.primary_endpoint_address
 }
