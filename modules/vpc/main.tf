@@ -21,13 +21,9 @@ resource "aws_internet_gateway" "this" {
 resource "aws_subnet" "public" {
   count = length(var.public_subnet_cidrs)
 
-  vpc_id            = aws_vpc.this.id
-  cidr_block        = var.public_subnet_cidrs[count.index]
-  availability_zone = var.availability_zones[count.index]
-
-  # 踏み台EC2等の起動時にパブリックIPを自動割り当てするための設定。
-  # 本書では利便性を考慮してtrueにしていますが、ALBのみを配置する厳格な環境では
-  # falseに設定して個別制御する設計も選択できます。
+  vpc_id                  = aws_vpc.this.id
+  cidr_block              = var.public_subnet_cidrs[count.index]
+  availability_zone       = var.availability_zones[count.index]
   map_public_ip_on_launch = true
 
   tags = {
@@ -115,7 +111,6 @@ resource "aws_route_table_association" "private" {
 resource "aws_default_security_group" "this" {
   vpc_id = aws_vpc.this.id
 
-  # ingress/egressブロックを空にすることで、全ルールを削除する
   tags = {
     Name = "${var.project}-${var.env}-default-sg-restricted"
   }
@@ -138,7 +133,11 @@ resource "aws_s3_bucket_public_access_block" "vpc_flow_logs" {
   restrict_public_buckets = true
 }
 
-# VPC Flow LogsサービスからのPutObjectのみを許可する
+# VPCフローログをS3へ直接配信するための権限。CloudWatch Logs時代のIAMロールに代わり、
+# ログ配信サービス(delivery.logs.amazonaws.com)からの書き込みをバケットポリシーで許可する。
+# 特定のVPCフローログのARNに絞ると、aws_flow_log.this がこのバケットポリシーに
+# depends_onで依存している関係上、循環参照になってしまうため、
+# サービス種別(logs)+アカウント+リージョンのワイルドカードで絞り込む（ALBログバケットと同じ考え方）。
 resource "aws_s3_bucket_policy" "vpc_flow_logs" {
   bucket = aws_s3_bucket.vpc_flow_logs.id
 

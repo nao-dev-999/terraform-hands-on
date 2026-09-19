@@ -9,6 +9,8 @@ module "vpc" {
   private_subnet_cidrs = var.private_subnet_cidrs
   availability_zones   = var.availability_zones
   nat_gateway_count    = var.nat_gateway_count
+
+  vpc_flow_log_retention_days = var.vpc_flow_log_retention_days
 }
 
 # ECS Module
@@ -87,9 +89,9 @@ module "alb" {
   alarm_sns_topic_arns = [module.alarms.sns_topic_arn]
 }
 
-# モジュール間の循環参照を避けるため、このルールはenv層で両モジュールのSG IDを参照する形で定義する。
-# aws_security_group.alb はインラインルールを一切持たない(modules/alb/main.tf参照)ため、
-# この別リソースとの混在によるルール競合・永続的diffは発生しない。
+# ALB -> ECSタスクへのアウトバウンドをアプリポート(8080)のみに限定する。
+# module.alb と module.ecs は互いに参照し合う関係にあり、モジュール間の循環参照を
+# 避けるため、このルールはenv層で両モジュールのSG IDを参照する形で定義する。
 resource "aws_vpc_security_group_egress_rule" "alb_egress_to_ecs" {
   security_group_id            = module.alb.alb_sg_id
   description                  = "Allow to ECS Fargate tasks (app port)"
@@ -116,8 +118,8 @@ module "alarms" {
   alb_arn_suffix              = module.alb.alb_arn_suffix
   alb_target_group_arn_suffix = module.alb.target_group_arn_suffix
 
-  rds_instance_id  = module.rds.rds_instance_id
-  redis_cluster_id = module.ecs.redis_cluster_id
+  rds_instance_id   = module.rds.rds_instance_id
+  redis_cluster_ids = module.ecs.redis_cluster_ids
 
   waf_web_acl_metric_name         = module.waf.web_acl_metric_name
   waf_auth_rate_limit_metric_name = module.waf.auth_rate_limit_metric_name

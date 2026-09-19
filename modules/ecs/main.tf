@@ -128,19 +128,19 @@ resource "aws_ecs_task_definition" "app" {
         },
         {
           name  = "SPRING_REDIS_HOST"
-          value = aws_elasticache_cluster.redis.cache_nodes[0].address
+          value = aws_elasticache_replication_group.redis.primary_endpoint_address
         },
         {
           name  = "SPRING_REDIS_PORT"
-          value = tostring(aws_elasticache_cluster.redis.cache_nodes[0].port)
+          value = tostring(aws_elasticache_replication_group.redis.port)
         },
         {
           name  = "SPRING_DATA_REDIS_HOST"
-          value = aws_elasticache_cluster.redis.cache_nodes[0].address
+          value = aws_elasticache_replication_group.redis.primary_endpoint_address
         },
         {
           name  = "SPRING_DATA_REDIS_PORT"
-          value = tostring(aws_elasticache_cluster.redis.cache_nodes[0].port)
+          value = tostring(aws_elasticache_replication_group.redis.port)
         }
       ]
 
@@ -241,7 +241,7 @@ resource "aws_ecs_service" "app" {
     rollback = true
   }
 
-  health_check_grace_period_seconds = 120
+  health_check_grace_period_seconds = var.health_check_grace_period_seconds
   availability_zone_rebalancing     = "ENABLED"
 
   network_configuration {
@@ -299,15 +299,24 @@ resource "aws_elasticache_subnet_group" "redis" {
   subnet_ids = var.private_subnet_ids
 }
 
-resource "aws_elasticache_cluster" "redis" {
-  cluster_id         = "${var.project}-${var.env}-redis"
-  engine             = "redis"
-  engine_version     = "7.1"
-  node_type          = "cache.t4g.micro"
-  num_cache_nodes    = 1
-  port               = 6379
-  subnet_group_name  = aws_elasticache_subnet_group.redis.name
-  security_group_ids = [aws_security_group.redis.id]
+resource "aws_elasticache_replication_group" "redis" {
+  replication_group_id       = "${var.project}-${var.env}-redis"
+  description                = "${var.project}-${var.env} Redis replication group"
+  engine                     = "redis"
+  engine_version             = "7.1"
+  node_type                  = var.redis_node_type
+  num_cache_clusters         = var.redis_num_cache_clusters
+  port                       = 6379
+  subnet_group_name          = aws_elasticache_subnet_group.redis.name
+  security_group_ids         = [aws_security_group.redis.id]
+  automatic_failover_enabled = var.redis_num_cache_clusters > 1
+  multi_az_enabled           = var.redis_num_cache_clusters > 1
+  notification_topic_arn     = var.redis_notification_topic_arn
+
+  at_rest_encryption_enabled = true
+  # transit_encryption_enabled = trueにするとRedis接続にTLSが必須になるため、
+  # Spring Boot側もspring.data.redis.ssl.enabled=trueに合わせて設定すること
+  transit_encryption_enabled = true
 
   tags = {
     Name = "${var.project}-${var.env}-redis"
@@ -343,8 +352,8 @@ resource "aws_ecs_task_definition" "batch" {
   family                   = "${var.project}-${var.env}-batch"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "512"
-  memory                   = "1024"
+  cpu                      = var.batch_cpu
+  memory                   = var.batch_memory
   execution_role_arn       = aws_iam_role.task_execution.arn
   task_role_arn            = aws_iam_role.task.arn
 

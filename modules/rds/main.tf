@@ -73,8 +73,7 @@ resource "aws_security_group" "rds" {
     from_port   = 0
     to_port     = 0
     protocol    = "-1"
-    cidr_blocks = []
-    # 必要な場合のみ、拡張機能の取得先などを個別に許可する
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
