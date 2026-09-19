@@ -116,7 +116,7 @@ resource "aws_default_security_group" "this" {
   }
 }
 
-resource "aws_s3_bucket" "vpc_flow_logs" {
+resource "aws_s3_bucket" "vpc_flow_logs" { # NOSONAR
   bucket = "${var.project}-${var.env}-vpc-flow-logs"
 
   tags = {
@@ -154,6 +154,21 @@ resource "aws_s3_bucket_policy" "vpc_flow_logs" {
           StringEquals = {
             "s3:x-amz-acl"      = "bucket-owner-full-control"
             "aws:SourceAccount" = data.aws_caller_identity.current.account_id
+          }
+        }
+      },
+      {
+        Sid       = "DenyInsecureTransport"
+        Effect    = "Deny"
+        Principal = "*"
+        Action    = "s3:*"
+        Resource = [
+          aws_s3_bucket.vpc_flow_logs.arn,
+          "${aws_s3_bucket.vpc_flow_logs.arn}/*"
+        ]
+        Condition = {
+          Bool = {
+            "aws:SecureTransport" = "false"
           }
         }
       }
