@@ -313,6 +313,11 @@ resource "aws_elasticache_replication_group" "redis" {
   multi_az_enabled           = var.redis_num_cache_clusters > 1
   notification_topic_arn     = var.redis_notification_topic_arn
 
+  at_rest_encryption_enabled = true
+  # transit_encryption_enabled = trueにするとRedis接続にTLSが必須になるため、
+  # Spring Boot側もspring.data.redis.ssl.enabled=trueに合わせて設定すること
+  transit_encryption_enabled = true
+
   tags = {
     Name = "${var.project}-${var.env}-redis"
   }
