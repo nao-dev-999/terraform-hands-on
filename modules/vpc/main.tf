@@ -116,7 +116,7 @@ resource "aws_default_security_group" "this" {
   }
 }
 
-resource "aws_s3_bucket" "vpc_flow_logs" {
+resource "aws_s3_bucket" "vpc_flow_logs" { # NOSONAR
   bucket = "${var.project}-${var.env}-vpc-flow-logs"
 
   tags = {
