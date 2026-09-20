@@ -1,6 +1,6 @@
 resource "aws_s3_bucket" "artifacts" {
   bucket        = "${var.project}-${var.env}-pipeline-artifacts"
-  force_destroy = true
+  force_destroy = var.env == "prod" ? false : true
 
   tags = {
     Project = var.project
@@ -95,8 +95,8 @@ resource "aws_iam_role_policy" "pipeline" {
       },
       {
         Effect   = "Allow"
-        Action   = ["codestar-connections:UseConnection", "codestar-connections:PassConnection"]
-        Resource = aws_codestarconnections_connection.github.arn
+        Action   = ["codeconnections:UseConnection", "codeconnections:PassConnection"]
+        Resource = aws_codeconnections_connection.github.arn
       },
       {
         Effect   = "Allow"
@@ -167,7 +167,7 @@ resource "aws_iam_role_policy" "codebuild" {
   })
 }
 
-resource "aws_codestarconnections_connection" "github" {
+resource "aws_codeconnections_connection" "github" {
   name          = "${var.project}-${var.env}-github"
   provider_type = "GitHub"
 }
@@ -283,7 +283,7 @@ resource "aws_codepipeline" "this" {
       output_artifacts = ["source_output"]
 
       configuration = {
-        ConnectionArn        = aws_codestarconnections_connection.github.arn
+        ConnectionArn        = aws_codeconnections_connection.github.arn
         FullRepositoryId     = var.github_repository # "owner/repo"
         BranchName           = var.github_branch
         OutputArtifactFormat = "CODE_ZIP"
@@ -402,7 +402,7 @@ resource "aws_codepipeline" "batch" {
       version          = "1"
       output_artifacts = ["source_output"]
       configuration = {
-        ConnectionArn        = aws_codestarconnections_connection.github.arn
+        ConnectionArn        = aws_codeconnections_connection.github.arn
         FullRepositoryId     = var.github_repository
         BranchName           = var.github_branch
         OutputArtifactFormat = "CODE_ZIP"

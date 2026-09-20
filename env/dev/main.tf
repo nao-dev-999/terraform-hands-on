@@ -84,7 +84,7 @@ module "alb" {
   target_port       = 8080
   health_check_path = "/actuator/health"
 
-  enable_deletion_protection = false # devでは頻繁に作り直すためfalse。本番環境ではtrueにすること
+  enable_deletion_protection = var.enable_deletion_protection
 
   alarm_sns_topic_arns = [module.alarms.sns_topic_arn]
 }

@@ -101,6 +101,12 @@ variable "notification_emails" {
   default = []
 }
 
+# ALB
+variable "enable_deletion_protection" {
+  type    = bool
+  default = false
+}
+
 # CI/CD
 variable "github_repository" {
   type = string
