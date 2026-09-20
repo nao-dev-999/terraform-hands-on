@@ -313,6 +313,11 @@ resource "aws_elasticache_replication_group" "redis" {
   multi_az_enabled           = var.redis_num_cache_clusters > 1
   notification_topic_arn     = var.redis_notification_topic_arn
   at_rest_encryption_enabled = true
+  # 書籍の本文ではSpring Boot側のTLS対応が別途必要になるという理由でtransit_encryption_enabledを
+  # 有効化していないが、静的解析ツール(SonarCloud等)がElastiCacheの通信経路暗号化未設定を
+  # 脆弱性として検出するため、このリポジトリでは有効化している。実際に接続する場合は
+  # Spring Boot側もspring.data.redis.ssl.enabled=trueに合わせて設定すること。
+  transit_encryption_enabled = true
 
   tags = {
     Name = "${var.project}-${var.env}-redis"
