@@ -1,0 +1,42 @@
+# プロジェクト基本情報
+project    = "terraform-hands-on"
+env        = "prod"
+aws_region = "ap-northeast-1"
+
+# ネットワーク設定
+vpc_cidr                    = "10.2.0.0/16"
+public_subnet_cidrs         = ["10.2.1.0/24", "10.2.2.0/24"]
+private_subnet_cidrs        = ["10.2.11.0/24", "10.2.12.0/24"]
+availability_zones          = ["ap-northeast-1a", "ap-northeast-1c"]
+nat_gateway_count           = 2 # AZ障害時のSPOFを避けるためAZ数分用意する（第5章5.5）
+vpc_flow_log_retention_days = 365
+
+# ECS
+app_image_url    = "xxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/ec-api"
+app_image_tag    = "latest"
+flyway_image_url = "xxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/flyway"
+flyway_image_tag = "latest"
+desired_count    = 3
+min_capacity     = 3
+max_capacity     = 10
+
+# RDS
+rds_identifier                = "terraform-hands-on-prod-db"
+rds_database_name             = "terraform_hands_on_prod_db"
+rds_instance_class            = "db.r6g.large"
+rds_multi_az                  = true
+rds_backup_retention_period   = 30
+rds_skip_final_snapshot       = false
+rds_deletion_protection       = true
+rds_max_connections_threshold = 150
+
+# 監視・コスト管理
+monthly_limit_usd   = 500
+notification_emails = ["prod-oncall@example.com", "sre-team@example.com"]
+
+# ALB
+enable_deletion_protection = true
+
+# CI/CD
+github_repository = "xxx/xxx"
+github_branch     = "main"
