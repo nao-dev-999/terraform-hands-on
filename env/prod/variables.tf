@@ -104,7 +104,7 @@ variable "notification_emails" {
 # ALB
 variable "enable_deletion_protection" {
   type    = bool
-  default = false
+  default = true
 }
 
 # CI/CD

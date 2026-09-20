@@ -18,8 +18,11 @@ flyway_image_url = "xxxxx.dkr.ecr.ap-northeast-1.amazonaws.com/flyway"
 flyway_image_tag = "latest"
 
 # RDS
-rds_identifier    = "terraform-hands-on-dev"
+rds_identifier    = "terraform-hands-on-dev-db"
 rds_database_name = "terraform_hands_on_dev_db"
+
+# ALB
+enable_deletion_protection = false
 
 # CI/CD
 github_repository = "xxx/xxx"

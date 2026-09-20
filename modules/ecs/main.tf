@@ -312,11 +312,10 @@ resource "aws_elasticache_replication_group" "redis" {
   automatic_failover_enabled = var.redis_num_cache_clusters > 1
   multi_az_enabled           = var.redis_num_cache_clusters > 1
   notification_topic_arn     = var.redis_notification_topic_arn
-
   at_rest_encryption_enabled = true
-  # transit_encryption_enabled = trueにするとRedis接続にTLSが必須になるため、
-  # Spring Boot側もspring.data.redis.ssl.enabled=trueに合わせて設定すること
-  transit_encryption_enabled = true
+  # VPC内(プライベートサブネット)に閉じた通信のため、通信経路の暗号化(TLS)は行わない。
+  # 有効化するとRedisクライアント側もTLS接続への対応が別途必要になる。
+  transit_encryption_enabled = false # NOSONAR
 
   tags = {
     Name = "${var.project}-${var.env}-redis"

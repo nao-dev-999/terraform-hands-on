@@ -133,11 +133,6 @@ resource "aws_s3_bucket_public_access_block" "vpc_flow_logs" {
   restrict_public_buckets = true
 }
 
-# VPCフローログをS3へ直接配信するための権限。CloudWatch Logs時代のIAMロールに代わり、
-# ログ配信サービス(delivery.logs.amazonaws.com)からの書き込みをバケットポリシーで許可する。
-# 特定のVPCフローログのARNに絞ると、aws_flow_log.this がこのバケットポリシーに
-# depends_onで依存している関係上、循環参照になってしまうため、
-# サービス種別(logs)+アカウント+リージョンのワイルドカードで絞り込む（ALBログバケットと同じ考え方）。
 resource "aws_s3_bucket_policy" "vpc_flow_logs" {
   bucket = aws_s3_bucket.vpc_flow_logs.id
 
