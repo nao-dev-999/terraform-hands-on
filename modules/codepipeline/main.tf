@@ -168,7 +168,10 @@ resource "aws_iam_role_policy" "codebuild" {
 }
 
 resource "aws_codeconnections_connection" "github" {
-  name          = "${var.project}-${var.env}-github"
+  # nameは1〜32文字の制約があるため、project名が長い場合でも収まるようtruncateする。
+  # (project・envの組み合わせによってはgithubの一部が欠けるが、名前自体はAWSコンソール上の
+  # 表示用でしかなくConnectionArnで参照されるため、実害はない)
+  name          = substr("${var.project}-${var.env}-github", 0, 32)
   provider_type = "GitHub"
 }
 
