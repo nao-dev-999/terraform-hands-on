@@ -105,22 +105,6 @@ resource "aws_db_parameter_group" "this" {
   }
 }
 
-resource "aws_cloudwatch_metric_alarm" "rds_cpu" {
-  alarm_name          = "${var.project}-${var.env}-rds-cpu-high"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 3
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/RDS"
-  period              = 300
-  statistic           = "Average"
-  threshold           = 80
-  alarm_description   = "RDS CPU使用率が80%を3回連続で超過"
-  dimensions = {
-    DBInstanceIdentifier = aws_db_instance.this.id
-  }
-  alarm_actions = [var.alarm_sns_topic_arn]
-}
-
 resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
   alarm_name          = "${var.project}-${var.env}-rds-storage-low"
   comparison_operator = "LessThanThreshold"
@@ -131,22 +115,6 @@ resource "aws_cloudwatch_metric_alarm" "rds_free_storage" {
   statistic           = "Average"
   threshold           = 2147483648 # 2GiB
   alarm_description   = "RDS空きストレージが2GiBを下回った"
-  dimensions = {
-    DBInstanceIdentifier = aws_db_instance.this.id
-  }
-  alarm_actions = [var.alarm_sns_topic_arn]
-}
-
-resource "aws_cloudwatch_metric_alarm" "rds_connections" {
-  alarm_name          = "${var.project}-${var.env}-rds-connections-high"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 3
-  metric_name         = "DatabaseConnections"
-  namespace           = "AWS/RDS"
-  period              = 300
-  statistic           = "Average"
-  threshold           = var.max_connections_threshold
-  alarm_description   = "RDS接続数が閾値を超過。コネクションリークやスケールアウトの過多を疑う"
   dimensions = {
     DBInstanceIdentifier = aws_db_instance.this.id
   }

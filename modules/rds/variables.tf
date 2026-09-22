@@ -75,11 +75,6 @@ variable "deletion_protection" {
   default = false
 }
 
-variable "max_connections_threshold" {
-  type    = number
-  default = 80
-}
-
 variable "alarm_sns_topic_arn" {
   type = string
 }

@@ -42,6 +42,11 @@ module "ecs" {
   max_capacity  = var.max_capacity
 
   batch_schedule_expression = var.batch_schedule_expression
+
+  # ElastiCache/FargateタスクはVPC内にENIを持つが、vpc_id/subnet_ids経由の暗黙の依存だけでは
+  # Internet Gatewayとの破棄順序が保証されない。destroy時のIGWデタッチ詰まりを防ぐため
+  # 明示的に依存させる。
+  depends_on = [module.vpc]
 }
 
 # RDS Module
@@ -66,11 +71,16 @@ module "rds" {
   skip_final_snapshot     = var.rds_skip_final_snapshot
   deletion_protection     = var.rds_deletion_protection
 
-  max_connections_threshold = var.rds_max_connections_threshold
-  alarm_sns_topic_arn       = module.alarms.sns_topic_arn
+  alarm_sns_topic_arn = module.alarms.sns_topic_arn
 
   monthly_limit_usd   = var.monthly_limit_usd
   notification_emails = var.notification_emails
+
+  # RDSのCPU/接続数アラームはmodule.rds側では作らずmodule.alarmsに一本化している
+  # (alarm_nameの重複によりterraform applyのたびに設定が奪い合いになっていたため)。
+  # subnet_ids経由の暗黙の依存だけではInternet Gatewayとの破棄順序が保証されないため、
+  # destroy時のIGWデタッチ詰まりを防ぐため明示的に依存させる。
+  depends_on = [module.vpc]
 }
 
 # ALB Module
@@ -87,6 +97,12 @@ module "alb" {
   enable_deletion_protection = var.enable_deletion_protection
 
   alarm_sns_topic_arns = [module.alarms.sns_topic_arn]
+
+  # ALBはsubnet_ids経由でVPCモジュールの一部リソース(サブネット)には暗黙に依存するが、
+  # Internet Gatewayとは依存関係が無い。destroy時にALB(のENI)がまだ残っている間に
+  # IGWのデタッチが試みられ、DependencyViolationのリトライで長時間詰まることがあるため、
+  # VPCモジュール全体より確実に先に破棄されるよう明示的に依存させる。
+  depends_on = [module.vpc]
 }
 
 # ALB -> ECSタスクへのアウトバウンドをアプリポート(8080)のみに限定する。
@@ -118,8 +134,9 @@ module "alarms" {
   alb_arn_suffix              = module.alb.alb_arn_suffix
   alb_target_group_arn_suffix = module.alb.target_group_arn_suffix
 
-  rds_instance_id   = module.rds.rds_instance_id
-  redis_cluster_ids = module.ecs.redis_cluster_ids
+  rds_instance_id                    = module.rds.rds_instance_id
+  rds_database_connections_threshold = var.rds_max_connections_threshold
+  redis_cluster_ids                  = module.ecs.redis_cluster_ids
 
   waf_web_acl_metric_name         = module.waf.web_acl_metric_name
   waf_auth_rate_limit_metric_name = module.waf.auth_rate_limit_metric_name
