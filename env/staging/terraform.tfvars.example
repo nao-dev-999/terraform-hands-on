@@ -1,5 +1,5 @@
 # プロジェクト基本情報
-project    = "terraform-hands-on"
+project    = "tf-hands-on"
 env        = "staging"
 aws_region = "ap-northeast-1"
 
