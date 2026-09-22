@@ -2,11 +2,6 @@ variable "project" { type = string }
 variable "env" { type = string }
 variable "aws_region" { type = string }
 
-variable "aws_profile" {
-  type    = string
-  default = "dev"
-}
-
 # VPC
 variable "vpc_cidr" { type = string }
 variable "public_subnet_cidrs" { type = list(string) }
