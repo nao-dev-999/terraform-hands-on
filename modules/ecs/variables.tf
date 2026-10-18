@@ -103,6 +103,12 @@ variable "batch_schedule_expression" {
   default = "cron(0 17 * * ? *)"
 }
 
+variable "batch_schedule_enabled" {
+  type        = bool
+  default     = true
+  description = "falseにすると日次バッチのスケジュールを無効化する(検証環境のスリープ用)"
+}
+
 variable "redis_node_type" {
   type    = string
   default = "cache.t4g.micro"
@@ -111,6 +117,12 @@ variable "redis_node_type" {
 variable "redis_num_cache_clusters" {
   type    = number
   default = 1
+}
+
+variable "enable_redis" {
+  type        = bool
+  default     = true
+  description = "falseにするとElastiCache Redisを削除する(検証環境のスリープ用)"
 }
 
 variable "redis_notification_topic_arn" {

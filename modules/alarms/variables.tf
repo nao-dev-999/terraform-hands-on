@@ -27,8 +27,15 @@ variable "ecs_service_name" {
   type = string
 }
 
+variable "sleep_mode" {
+  type        = bool
+  default     = false
+  description = "trueの間は、停止しているALB・ECSサービス向けで誤報になるアラームとダッシュボードのウィジェットを作らない"
+}
+
 variable "alb_arn_suffix" {
-  type = string
+  type        = string
+  description = "ALBのarn_suffix。sleep_mode = true の場合はnullでよい"
 }
 
 variable "alb_target_group_arn_suffix" {

@@ -1,6 +1,14 @@
 variable "project" { type = string }
+
 variable "env" { type = string }
 variable "aws_region" { type = string }
+
+# スリープモード
+variable "sleep_mode" {
+  type        = bool
+  default     = false
+  description = "trueにすると時間課金のリソースを削除・停止してコストを抑える(destroyせずに済む)。falseで元に戻る"
+}
 
 # VPC
 variable "vpc_cidr" { type = string }

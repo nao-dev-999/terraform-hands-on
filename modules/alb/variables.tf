@@ -39,6 +39,12 @@ variable "enable_waf_fail_open" {
   default = false
 }
 
+variable "enable_alb" {
+  type        = bool
+  default     = true
+  description = "falseにするとALB本体とリスナーを削除する(検証環境のスリープ用)"
+}
+
 variable "enable_deletion_protection" {
   type    = bool
   default = false

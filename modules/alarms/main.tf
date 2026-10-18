@@ -54,6 +54,8 @@ resource "aws_cloudwatch_metric_alarm" "app_error" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "service_running_count_zero" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-ecs-running-count-zero"
   alarm_description = "ECSサービスの起動中タスク数が0になった"
 
@@ -137,6 +139,8 @@ resource "aws_cloudwatch_metric_alarm" "memory_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alb_unhealthy_host" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-unhealthy-host"
   alarm_description = "ALBターゲットグループにヘルスチェック失敗のタスクが存在する"
   # 「起動数0」より先に、デプロイ失敗やヘルスチェックNGを早期検知する
@@ -165,6 +169,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_unhealthy_host" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alb_target_5xx" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-target-5xx"
   alarm_description = "ALB配下のアプリが返す5xxレスポンスが急増している"
   # GlobalExceptionHandlerのERRORログでは拾えない経路（フィルタ層等）の失敗も検知できる
@@ -192,6 +198,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_target_5xx" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alb_elb_5xx" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-elb-5xx"
   alarm_description = "ALB自身が返す5xxレスポンス(HTTPCode_ELB_5XX_Count)が急増している"
   # ターゲット側ではなくALB/WAF側の異常。WAF fail closed発生時等もここに現れる
@@ -219,6 +227,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_elb_5xx" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alb_target_response_time_high" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-target-response-time-high"
   alarm_description = "ALB配下のアプリの応答時間が閾値を超えている"
 
@@ -245,6 +255,8 @@ resource "aws_cloudwatch_metric_alarm" "alb_target_response_time_high" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "alb_rejected_connections" {
+  count = var.sleep_mode ? 0 : 1
+
   alarm_name        = "${var.project}-${var.env}-alb-rejected-connections"
   alarm_description = "ALBが最大接続数に達し、接続を拒否している(RejectedConnectionCount)"
   # 通常のエラー(5xx等)より深刻。ALBのキャパシティ限界を示すため、閾値は低めに設定する
@@ -468,7 +480,8 @@ resource "aws_cloudwatch_metric_alarm" "waf_auth_rate_limit_triggered" {
 }
 
 locals {
-  dashboard_widgets = [
+  # スリープ中はALB自体が無くLoadBalancerディメンションを組み立てられないため、ALBのウィジェット(null)を除外する
+  dashboard_widgets = [for w in [
     {
       type = "metric", x = 0, y = 0, width = 12, height = 6
       properties = {
@@ -495,7 +508,7 @@ locals {
         ]
       }
     },
-    {
+    var.sleep_mode ? null : {
       type = "metric", x = 0, y = 6, width = 12, height = 6
       properties = {
         title  = "ALB ヘルスチェック / 5xx"
@@ -563,10 +576,40 @@ locals {
         ]
       }
     },
-  ]
+  ] : w if w != null]
 }
 
 resource "aws_cloudwatch_dashboard" "ops" {
   dashboard_name = "${var.project}-${var.env}-ops"
   dashboard_body = jsonencode({ widgets = local.dashboard_widgets })
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_unhealthy_host
+  to   = aws_cloudwatch_metric_alarm.alb_unhealthy_host[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_target_5xx
+  to   = aws_cloudwatch_metric_alarm.alb_target_5xx[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_elb_5xx
+  to   = aws_cloudwatch_metric_alarm.alb_elb_5xx[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_target_response_time_high
+  to   = aws_cloudwatch_metric_alarm.alb_target_response_time_high[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.alb_rejected_connections
+  to   = aws_cloudwatch_metric_alarm.alb_rejected_connections[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.service_running_count_zero
+  to   = aws_cloudwatch_metric_alarm.service_running_count_zero[0]
 }

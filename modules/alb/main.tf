@@ -146,7 +146,11 @@ resource "aws_s3_bucket_policy" "access_logs" {
   })
 }
 
+# enable_alb = false の間はALB本体・リスナー・ALB単位のアラームだけを削除する。
+# ターゲットグループ・SG・証明書・ログバケットは無料のため残し、ECSサービスの参照先を変えずに済むようにする。
 resource "aws_lb" "this" {
+  count = var.enable_alb ? 1 : 0
+
   name               = "${var.project}-${var.env}-alb"
   internal           = false
   load_balancer_type = "application"
@@ -238,7 +242,9 @@ resource "aws_lb_target_group" "this" {
 }
 
 resource "aws_lb_listener" "http" {
-  load_balancer_arn = aws_lb.this.arn
+  count = var.enable_alb ? 1 : 0
+
+  load_balancer_arn = aws_lb.this[0].arn
   port              = 80
   protocol          = "HTTP"
 
@@ -292,7 +298,9 @@ resource "aws_acm_certificate" "self_signed" {
 }
 
 resource "aws_lb_listener" "https" {
-  load_balancer_arn = aws_lb.this.arn
+  count = var.enable_alb ? 1 : 0
+
+  load_balancer_arn = aws_lb.this[0].arn
   port              = 443
   protocol          = "HTTPS"
   ssl_policy        = "ELBSecurityPolicy-TLS13-1-2-2021-06"
@@ -316,6 +324,8 @@ resource "aws_lb_listener" "https" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "unhealthy_host_count" {
+  count = var.enable_alb ? 1 : 0
+
   alarm_name          = "${var.project}-${var.env}-alb-unhealthy-host-count"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 2
@@ -327,7 +337,7 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_host_count" {
   alarm_description   = "ターゲットグループ内に異常なホストが存在する"
 
   dimensions = {
-    LoadBalancer = aws_lb.this.arn_suffix
+    LoadBalancer = aws_lb.this[0].arn_suffix
     TargetGroup  = aws_lb_target_group.this.arn_suffix
   }
 
@@ -336,6 +346,8 @@ resource "aws_cloudwatch_metric_alarm" "unhealthy_host_count" {
 }
 
 resource "aws_cloudwatch_metric_alarm" "elb_5xx_count" {
+  count = var.enable_alb ? 1 : 0
+
   alarm_name          = "${var.project}-${var.env}-alb-elb-5xx-count"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 3
@@ -347,9 +359,34 @@ resource "aws_cloudwatch_metric_alarm" "elb_5xx_count" {
   alarm_description   = "ALB自身が返す5xxエラーが増加している(バックエンド接続不可の兆候)"
 
   dimensions = {
-    LoadBalancer = aws_lb.this.arn_suffix
+    LoadBalancer = aws_lb.this[0].arn_suffix
   }
 
   alarm_actions = var.alarm_sns_topic_arns
   ok_actions    = var.alarm_sns_topic_arns
+}
+
+moved {
+  from = aws_lb.this
+  to   = aws_lb.this[0]
+}
+
+moved {
+  from = aws_lb_listener.http
+  to   = aws_lb_listener.http[0]
+}
+
+moved {
+  from = aws_lb_listener.https
+  to   = aws_lb_listener.https[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.unhealthy_host_count
+  to   = aws_cloudwatch_metric_alarm.unhealthy_host_count[0]
+}
+
+moved {
+  from = aws_cloudwatch_metric_alarm.elb_5xx_count
+  to   = aws_cloudwatch_metric_alarm.elb_5xx_count[0]
 }

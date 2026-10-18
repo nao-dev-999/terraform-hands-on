@@ -93,3 +93,14 @@ variable "notification_emails" {
   type    = list(string)
   default = []
 }
+
+variable "instance_state" {
+  type        = string
+  default     = null
+  description = "インスタンスの状態(\"available\" または \"stopped\")。nullの場合はTerraformで起動/停止を管理しない"
+
+  validation {
+    condition     = var.instance_state == null || contains(["available", "stopped"], coalesce(var.instance_state, "available"))
+    error_message = "instance_state は null、\"available\"、\"stopped\" のいずれかを指定してください。"
+  }
+}

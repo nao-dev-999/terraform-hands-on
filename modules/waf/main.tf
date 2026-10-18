@@ -58,7 +58,15 @@ resource "aws_s3_bucket_lifecycle_configuration" "waf_logs" {
   }
 }
 
+locals {
+  # WebACLを削除している間もアラーム・ダッシュボードを維持できるよう、メトリクス名は固定値で公開する
+  web_acl_metric_name = "${var.project}-${var.env}-waf"
+}
+
+# enabled = false の間はWebACL・ALBとの関連付け・ログ設定を削除する(ログバケットは残す)
 resource "aws_wafv2_web_acl" "this" {
+  count = var.enabled ? 1 : 0
+
   name        = "${var.project}-${var.env}-waf"
   description = "Rate limiting and managed rules for ${var.project}-${var.env} ALB"
   scope       = "REGIONAL"
@@ -269,7 +277,7 @@ resource "aws_wafv2_web_acl" "this" {
 
   visibility_config {
     cloudwatch_metrics_enabled = true
-    metric_name                = "${var.project}-${var.env}-waf"
+    metric_name                = local.web_acl_metric_name
     sampled_requests_enabled   = true
   }
 
@@ -279,12 +287,16 @@ resource "aws_wafv2_web_acl" "this" {
 }
 
 resource "aws_wafv2_web_acl_association" "alb" {
+  count = var.enabled ? 1 : 0
+
   resource_arn = var.alb_arn
-  web_acl_arn  = aws_wafv2_web_acl.this.arn
+  web_acl_arn  = aws_wafv2_web_acl.this[0].arn
 }
 
 resource "aws_wafv2_web_acl_logging_configuration" "this" {
-  resource_arn            = aws_wafv2_web_acl.this.arn
+  count = var.enabled ? 1 : 0
+
+  resource_arn            = aws_wafv2_web_acl.this[0].arn
   log_destination_configs = [aws_s3_bucket.waf_logs.arn]
 
   # JWT認証のAuthorizationヘッダー、およびRedisセッションのCookieヘッダーは
@@ -300,4 +312,19 @@ resource "aws_wafv2_web_acl_logging_configuration" "this" {
       name = "cookie"
     }
   }
+}
+
+moved {
+  from = aws_wafv2_web_acl.this
+  to   = aws_wafv2_web_acl.this[0]
+}
+
+moved {
+  from = aws_wafv2_web_acl_association.alb
+  to   = aws_wafv2_web_acl_association.alb[0]
+}
+
+moved {
+  from = aws_wafv2_web_acl_logging_configuration.this
+  to   = aws_wafv2_web_acl_logging_configuration.this[0]
 }

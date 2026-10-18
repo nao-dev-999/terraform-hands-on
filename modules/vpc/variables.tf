@@ -32,6 +32,12 @@ variable "nat_gateway_count" {
   }
 }
 
+variable "enable_nat_gateway" {
+  type        = bool
+  default     = true
+  description = "falseにするとNAT Gatewayを削除し、プライベートサブネットからのインターネット通信を止める(検証環境のスリープ用)"
+}
+
 variable "vpc_flow_log_retention_days" {
   type    = number
   default = 180

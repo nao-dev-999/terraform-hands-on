@@ -65,8 +65,14 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+# enable_nat_gateway = false の間はNAT Gateway(EIP含む)とプライベートルートテーブルを作らない。
+# プライベートサブネットはVPCのメインルートテーブル(VPC内ローカル通信のみ)にフォールバックする。
+locals {
+  nat_gateway_count = var.enable_nat_gateway ? var.nat_gateway_count : 0
+}
+
 resource "aws_eip" "nat" {
-  count  = var.nat_gateway_count
+  count  = local.nat_gateway_count
   domain = "vpc"
 
   tags = {
@@ -75,7 +81,7 @@ resource "aws_eip" "nat" {
 }
 
 resource "aws_nat_gateway" "this" {
-  count         = var.nat_gateway_count
+  count         = local.nat_gateway_count
   allocation_id = aws_eip.nat[count.index].id
   subnet_id     = aws_subnet.public[count.index].id
 
@@ -87,7 +93,7 @@ resource "aws_nat_gateway" "this" {
 }
 
 resource "aws_route_table" "private" {
-  count  = var.nat_gateway_count
+  count  = local.nat_gateway_count
   vpc_id = aws_vpc.this.id
 
   route {
@@ -101,10 +107,10 @@ resource "aws_route_table" "private" {
 }
 
 resource "aws_route_table_association" "private" {
-  count     = length(aws_subnet.private)
+  count     = local.nat_gateway_count > 0 ? length(aws_subnet.private) : 0
   subnet_id = aws_subnet.private[count.index].id
   route_table_id = aws_route_table.private[
-    min(count.index, var.nat_gateway_count - 1)
+    min(count.index, local.nat_gateway_count - 1)
   ].id
 }
 
