@@ -128,19 +128,19 @@ resource "aws_ecs_task_definition" "app" {
         },
         {
           name  = "SPRING_REDIS_HOST"
-          value = aws_elasticache_replication_group.redis.primary_endpoint_address
+          value = local.redis_host
         },
         {
           name  = "SPRING_REDIS_PORT"
-          value = tostring(aws_elasticache_replication_group.redis.port)
+          value = tostring(local.redis_port)
         },
         {
           name  = "SPRING_DATA_REDIS_HOST"
-          value = aws_elasticache_replication_group.redis.primary_endpoint_address
+          value = local.redis_host
         },
         {
           name  = "SPRING_DATA_REDIS_PORT"
-          value = tostring(aws_elasticache_replication_group.redis.port)
+          value = tostring(local.redis_port)
         }
       ]
 
@@ -299,14 +299,25 @@ resource "aws_elasticache_subnet_group" "redis" {
   subnet_ids = var.private_subnet_ids
 }
 
+# enable_redis = false の間はレプリケーショングループを削除する(SG・サブネットグループは無料のため残す)。
+# Redisにはセッション等の一時データしか置かない前提のため、データは引き継がない。
+locals {
+  redis_replication_group_id = "${var.project}-${var.env}-redis"
+  redis_port                 = 6379
+  # 削除中はタスク定義に入れる値が無いため、名前解決できないダミーのホスト名を入れておく
+  redis_host = var.enable_redis ? aws_elasticache_replication_group.redis[0].primary_endpoint_address : "redis-disabled.invalid"
+}
+
 resource "aws_elasticache_replication_group" "redis" {
-  replication_group_id       = "${var.project}-${var.env}-redis"
+  count = var.enable_redis ? 1 : 0
+
+  replication_group_id       = local.redis_replication_group_id
   description                = "${var.project}-${var.env} Redis replication group"
   engine                     = "redis"
   engine_version             = "7.1"
   node_type                  = var.redis_node_type
   num_cache_clusters         = var.redis_num_cache_clusters
-  port                       = 6379
+  port                       = local.redis_port
   subnet_group_name          = aws_elasticache_subnet_group.redis.name
   security_group_ids         = [aws_security_group.redis.id]
   automatic_failover_enabled = var.redis_num_cache_clusters > 1
@@ -532,6 +543,9 @@ resource "aws_scheduler_schedule" "batch_daily" {
     mode = "OFF"
   }
 
+  # スリープ中はNAT・Redisが無くバッチが必ず失敗するため、スケジュールごと止める
+  state = var.batch_schedule_enabled ? "ENABLED" : "DISABLED"
+
   schedule_expression          = var.batch_schedule_expression
   schedule_expression_timezone = "UTC"
 
@@ -561,4 +575,9 @@ resource "aws_ecs_task_definition" "db_debug" {
       }
     }
   ])
+}
+
+moved {
+  from = aws_elasticache_replication_group.redis
+  to   = aws_elasticache_replication_group.redis[0]
 }

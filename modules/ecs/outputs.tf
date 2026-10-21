@@ -20,7 +20,7 @@ output "redis_cluster_ids" {
   # 確定できる値としてノードIDを組み立てる。
   value = [
     for i in range(1, var.redis_num_cache_clusters + 1) :
-    format("%s-%03d", aws_elasticache_replication_group.redis.replication_group_id, i)
+    format("%s-%03d", local.redis_replication_group_id, i)
   ]
 }
 
@@ -49,5 +49,6 @@ output "batch_task_definition_family" {
 }
 
 output "redis_host" {
-  value = aws_elasticache_replication_group.redis.primary_endpoint_address
+  # enable_redis = false の間はnull
+  value = one(aws_elasticache_replication_group.redis[*].primary_endpoint_address)
 }

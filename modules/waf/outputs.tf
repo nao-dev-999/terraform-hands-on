@@ -1,9 +1,9 @@
 output "web_acl_arn" {
-  value = aws_wafv2_web_acl.this.arn
+  value = one(aws_wafv2_web_acl.this[*].arn)
 }
 
 output "web_acl_id" {
-  value = aws_wafv2_web_acl.this.id
+  value = one(aws_wafv2_web_acl.this[*].id)
 }
 
 output "waf_log_bucket_name" {
@@ -17,7 +17,7 @@ output "waf_log_bucket_arn" {
 }
 
 output "web_acl_metric_name" {
-  value       = aws_wafv2_web_acl.this.visibility_config[0].metric_name
+  value       = local.web_acl_metric_name
   description = "WebACL全体のCloudWatchメトリクス名(AWS/WAFV2名前空間のWebACLディメンションに使用)"
 }
 

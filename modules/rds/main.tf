@@ -47,6 +47,16 @@ resource "aws_db_instance" "this" {
   }
 }
 
+# インスタンスの起動/停止をTerraformで管理する(検証環境のスリープ用)。
+# instance_state = null の環境では作成せず、従来どおり常時起動とする。
+# 注意: AWSの仕様で、停止したインスタンスは7日後に自動で起動する。再度 terraform apply すると停止し直す。
+resource "aws_rds_instance_state" "this" {
+  count = var.instance_state == null ? 0 : 1
+
+  identifier = aws_db_instance.this.identifier
+  state      = var.instance_state
+}
+
 resource "aws_db_subnet_group" "this" {
   name        = "${var.project}-${var.env}-rds-subnet-group"
   subnet_ids  = var.subnet_ids

@@ -1,3 +1,8 @@
+# スリープモード(var.sleep_mode = true)
+# 削除しても作り直せる時間課金リソース(NAT Gateway・ALB・WAF・Redis)を削除し、
+# ECSタスクを0、RDSを停止状態にする。VPC・ECR・IAM・RDSのデータ・パイプライン等は残すため、
+# false に戻して terraform apply すれば元の構成に戻る。
+
 # VPC Module
 module "vpc" {
   source = "../../modules/vpc"
@@ -9,6 +14,7 @@ module "vpc" {
   private_subnet_cidrs = var.private_subnet_cidrs
   availability_zones   = var.availability_zones
   nat_gateway_count    = var.nat_gateway_count
+  enable_nat_gateway   = !var.sleep_mode
 
   vpc_flow_log_retention_days = var.vpc_flow_log_retention_days
 }
@@ -37,11 +43,15 @@ module "ecs" {
   db_port                = module.rds.rds_port
   db_name                = var.rds_database_name
 
-  desired_count = var.desired_count
-  min_capacity  = var.min_capacity
-  max_capacity  = var.max_capacity
+  # desired_countはlifecycleでignoreされているため、スケール範囲(min/max)を0にしてタスクを止める
+  desired_count = var.sleep_mode ? 0 : var.desired_count
+  min_capacity  = var.sleep_mode ? 0 : var.min_capacity
+  max_capacity  = var.sleep_mode ? 0 : var.max_capacity
 
   batch_schedule_expression = var.batch_schedule_expression
+  batch_schedule_enabled    = !var.sleep_mode
+
+  enable_redis = !var.sleep_mode
 }
 
 # RDS Module
@@ -65,6 +75,7 @@ module "rds" {
   backup_retention_period = var.rds_backup_retention_period
   skip_final_snapshot     = var.rds_skip_final_snapshot
   deletion_protection     = var.rds_deletion_protection
+  instance_state          = var.sleep_mode ? "stopped" : "available"
 
   max_connections_threshold = var.rds_max_connections_threshold
   alarm_sns_topic_arn       = module.alarms.sns_topic_arn
@@ -84,6 +95,7 @@ module "alb" {
   target_port       = 8080
   health_check_path = "/actuator/health"
 
+  enable_alb                 = !var.sleep_mode
   enable_deletion_protection = var.enable_deletion_protection
 
   alarm_sns_topic_arns = [module.alarms.sns_topic_arn]
@@ -110,6 +122,7 @@ module "alarms" {
   aws_region = var.aws_region
 
   notification_emails = var.notification_emails
+  sleep_mode          = var.sleep_mode
 
   app_log_group_name = module.ecs.app_log_group_name
   ecs_cluster_name   = module.ecs.cluster_name
@@ -131,6 +144,7 @@ module "waf" {
 
   project = var.project
   env     = var.env
+  enabled = !var.sleep_mode
   alb_arn = module.alb.alb_arn
 }
 

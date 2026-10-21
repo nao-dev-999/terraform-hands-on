@@ -6,8 +6,15 @@ variable "env" {
   type = string
 }
 
+variable "enabled" {
+  type        = bool
+  default     = true
+  description = "falseにするとWebACLを削除する(検証環境のスリープ用)。ALBを削除する場合はfalseにすること"
+}
+
 variable "alb_arn" {
-  type = string
+  type        = string
+  description = "WebACLを関連付けるALBのARN。enabled = false の場合はnullでよい"
 }
 
 variable "general_rate_limit" {
